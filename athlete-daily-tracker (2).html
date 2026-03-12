@@ -1,0 +1,1198 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AthlèteTrack — Suivi Quotidien</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a26;
+    --border: rgba(255,255,255,0.07);
+    --accent: #e8ff47;
+    --accent2: #47c8ff;
+    --text: #f0f0f5;
+    --muted: rgba(240,240,245,0.4);
+    --danger: #ff6b6b;
+    --success: #47ffb0;
+    --radius: 14px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grain texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.5;
+  }
+
+  /* ---- SCREENS ---- */
+  .screen { display: none; animation: fadeIn 0.4s ease; }
+  .screen.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ---- ONBOARDING ---- */
+  #screen-onboard {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    padding: 32px 20px;
+  }
+  #screen-onboard.active { display: flex; }
+
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(48px, 10vw, 80px);
+    letter-spacing: 4px;
+    color: var(--accent);
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+  .tagline {
+    color: var(--muted);
+    font-size: 14px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 48px;
+  }
+
+  .onboard-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 36px 32px;
+    width: 100%;
+    max-width: 420px;
+  }
+  .onboard-card h2 {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .onboard-card p {
+    color: var(--muted);
+    font-size: 14px;
+    margin-bottom: 28px;
+    line-height: 1.6;
+  }
+
+  .field-group { margin-bottom: 18px; }
+  .field-group label {
+    display: block;
+    font-size: 12px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .field-group input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 16px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .field-group input:focus { border-color: var(--accent); }
+  .field-group input::placeholder { color: rgba(240,240,245,0.2); }
+
+  /* ---- BUTTONS ---- */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px 28px;
+    border-radius: 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+    text-decoration: none;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #0a0a0f;
+    width: 100%;
+    letter-spacing: 0.5px;
+  }
+  .btn-primary:hover { background: #d4eb2e; transform: translateY(-1px); }
+  .btn-ghost {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    font-size: 13px;
+    padding: 10px 18px;
+  }
+  .btn-ghost:hover { background: var(--surface2); color: var(--text); }
+  .btn-success {
+    background: var(--success);
+    color: #0a0a0f;
+    width: 100%;
+    font-size: 17px;
+    padding: 18px;
+    border-radius: 14px;
+    letter-spacing: 0.5px;
+  }
+  .btn-success:hover { background: #2ee89a; transform: translateY(-1px); }
+
+  /* ---- MAIN TRACKER ---- */
+  #screen-tracker {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 24px 16px 80px;
+  }
+  #screen-tracker.active { display: block; }
+
+  .tracker-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 28px;
+    padding: 0 4px;
+  }
+  .athlete-info { display: flex; flex-direction: column; }
+  .athlete-greeting {
+    font-size: 13px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .athlete-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 2px;
+    color: var(--accent);
+    line-height: 1;
+  }
+  .date-badge {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 14px;
+    font-size: 13px;
+    color: var(--muted);
+    text-align: right;
+  }
+  .date-badge span { display: block; color: var(--text); font-weight: 500; font-size: 15px; }
+
+  /* Progress indicator */
+  .progress-bar-wrap {
+    background: var(--surface);
+    border-radius: 4px;
+    height: 4px;
+    margin-bottom: 28px;
+    overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 4px;
+    transition: width 0.4s ease;
+  }
+
+  /* Sections */
+  .section-label {
+    font-size: 11px;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 14px;
+    padding-left: 2px;
+  }
+
+  .metrics-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .metric-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    transition: border-color 0.2s;
+  }
+  .metric-card:hover { border-color: rgba(255,255,255,0.14); }
+
+  .metric-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+  .metric-name {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 15px;
+    font-weight: 500;
+  }
+  .metric-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  .metric-value-display {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 30px;
+    letter-spacing: 1px;
+    color: var(--accent);
+    min-width: 48px;
+    text-align: right;
+    transition: color 0.3s;
+  }
+  .metric-value-display.low { color: var(--danger); }
+  .metric-value-display.mid { color: var(--accent2); }
+  .metric-value-display.high { color: var(--accent); }
+
+  /* Custom slider */
+  .slider-wrap { position: relative; padding: 6px 0; }
+  input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--surface2);
+    outline: none;
+    cursor: pointer;
+    position: relative;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    box-shadow: 0 0 0 3px rgba(232,255,71,0.15);
+    transition: box-shadow 0.2s, transform 0.1s;
+  }
+  input[type=range]::-webkit-slider-thumb:hover {
+    box-shadow: 0 0 0 6px rgba(232,255,71,0.2);
+    transform: scale(1.1);
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    border: none;
+  }
+  .slider-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  /* Duration field */
+  .duration-field {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  .duration-field input[type=number] {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    color: var(--text);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 1px;
+    outline: none;
+    text-align: center;
+    transition: border-color 0.2s;
+  }
+  .duration-field input[type=number]:focus { border-color: var(--accent); }
+  .duration-field input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
+  .duration-unit { color: var(--muted); font-size: 14px; white-space: nowrap; }
+
+  /* Pain body selector */
+  .pain-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .pain-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 8px;
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .pain-btn span:first-child { font-size: 18px; }
+  .pain-btn:hover { border-color: var(--danger); color: var(--text); }
+  .pain-btn.selected {
+    background: rgba(255,107,107,0.12);
+    border-color: var(--danger);
+    color: var(--danger);
+  }
+  .pain-btn-none {
+    grid-column: span 3;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .pain-btn-none:hover { border-color: var(--success); color: var(--success); }
+  .pain-btn-none.selected {
+    background: rgba(71,255,176,0.08);
+    border-color: var(--success);
+    color: var(--success);
+  }
+
+  /* Submit */
+  .submit-area { margin-top: 32px; }
+
+  /* ---- SUCCESS SCREEN ---- */
+  #screen-success {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    padding: 32px 20px;
+    text-align: center;
+  }
+  #screen-success.active { display: flex; }
+  .success-icon {
+    width: 80px;
+    height: 80px;
+    background: rgba(71,255,176,0.1);
+    border: 2px solid var(--success);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    margin-bottom: 24px;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(71,255,176,0.3); }
+    50% { box-shadow: 0 0 0 16px rgba(71,255,176,0); }
+  }
+  .success-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 48px;
+    letter-spacing: 3px;
+    color: var(--success);
+    margin-bottom: 10px;
+  }
+  .success-sub { color: var(--muted); font-size: 15px; margin-bottom: 32px; }
+  .summary-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 36px;
+    max-width: 480px;
+  }
+  .pill {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 13px;
+    color: var(--text);
+  }
+  .pill strong { color: var(--accent); }
+
+  /* ---- COACH VIEW ---- */
+  #screen-coach {
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 24px 16px 80px;
+  }
+  #screen-coach.active { display: block; }
+
+  .coach-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 28px;
+  }
+  .coach-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 36px;
+    letter-spacing: 2px;
+    color: var(--accent);
+  }
+
+  .data-table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    overflow-x: auto;
+    margin-bottom: 24px;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead tr { background: var(--surface2); }
+  th {
+    padding: 12px 14px;
+    text-align: left;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  td {
+    padding: 12px 14px;
+    border-top: 1px solid var(--border);
+    color: var(--text);
+    white-space: nowrap;
+  }
+  tbody tr:hover { background: rgba(255,255,255,0.02); }
+  .val-high { color: var(--success); font-weight: 600; }
+  .val-low { color: var(--danger); font-weight: 600; }
+  .val-mid { color: var(--accent2); }
+
+  .empty-state {
+    text-align: center;
+    padding: 48px 24px;
+    color: var(--muted);
+    font-size: 14px;
+  }
+
+  /* Nav */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(10,10,15,0.95);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border);
+    display: none;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 20px;
+    z-index: 100;
+  }
+  .bottom-nav.visible { display: flex; }
+  .nav-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 20px;
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .nav-btn:hover, .nav-btn.active { background: var(--surface2); color: var(--text); border-color: rgba(255,255,255,0.15); }
+  .nav-btn.active { color: var(--accent); border-color: rgba(232,255,71,0.3); }
+
+  /* Coach unlock */
+  .coach-lock {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    text-align: center;
+    max-width: 380px;
+    margin: 80px auto 0;
+  }
+  .coach-lock h3 { font-size: 18px; margin-bottom: 8px; }
+  .coach-lock p { color: var(--muted); font-size: 14px; margin-bottom: 24px; }
+  .coach-lock input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 16px;
+    outline: none;
+    margin-bottom: 12px;
+    text-align: center;
+    letter-spacing: 4px;
+  }
+
+  .export-bar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .btn-sm {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 18px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn-sm:hover { background: var(--surface2); border-color: rgba(255,255,255,0.15); }
+  .btn-sm.accent { border-color: rgba(232,255,71,0.4); color: var(--accent); }
+  .btn-sm.accent:hover { background: rgba(232,255,71,0.08); }
+
+  /* Filters */
+  .filter-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .filter-select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  /* Tooltip */
+  .slider-track-fill {
+    height: 6px;
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--danger), var(--accent2), var(--accent));
+    position: absolute;
+    top: 50%;
+    left: 0;
+    transform: translateY(-50%);
+    pointer-events: none;
+    transition: width 0.1s;
+  }
+
+  @media (max-width: 480px) {
+    .pain-grid { grid-template-columns: repeat(2, 1fr); }
+    .pain-btn-none { grid-column: span 2; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ONBOARDING -->
+<div id="screen-onboard" class="screen active">
+  <div class="logo">AthlèteTrack</div>
+  <div class="tagline">Suivi Performance Quotidien</div>
+  <div class="onboard-card">
+    <h2>Bienvenue 👋</h2>
+    <p>Première connexion ? Indique ton prénom pour que ton coach reconnaisse tes données chaque jour.</p>
+    <div class="field-group">
+      <label>Ton prénom</label>
+      <input type="text" id="input-name" placeholder="Ex: Thomas" autocomplete="given-name" />
+    </div>
+    <div class="field-group">
+      <label>Ton sport</label>
+      <input type="text" id="input-sport" placeholder="Ex: Football, Tennis…" />
+    </div>
+    <button class="btn btn-primary" onclick="startTracker()">
+      Commencer le suivi →
+    </button>
+    <div style="margin-top:16px; text-align:center;">
+      <button class="btn btn-ghost" onclick="showCoachLogin()">Accès Coach 🔒</button>
+    </div>
+  </div>
+</div>
+
+<!-- TRACKER -->
+<div id="screen-tracker" class="screen">
+  <div class="tracker-header">
+    <div class="athlete-info">
+      <span class="athlete-greeting">Bonjour,</span>
+      <span class="athlete-name" id="display-name">Athlète</span>
+    </div>
+    <div class="date-badge">
+      <div id="display-date-label" style="font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--muted);">Aujourd'hui</div>
+      <span id="display-date">—</span>
+    </div>
+  </div>
+
+  <div class="progress-bar-wrap">
+    <div class="progress-bar-fill" id="progress-fill" style="width:0%"></div>
+  </div>
+
+  <!-- SECTION 1: RÉCUPÉRATION -->
+  <div class="section-label">🌙 Récupération & Bien-être</div>
+  <div class="metrics-grid" id="recovery-metrics"></div>
+
+  <!-- SECTION 2: SÉANCE -->
+  <div class="section-label">⚡ Séance du jour</div>
+  <div class="metrics-grid" id="session-metrics"></div>
+
+  <!-- DURATION -->
+  <div class="metric-card" style="margin-bottom:12px;">
+    <div class="metric-top">
+      <div class="metric-name">
+        <div class="metric-icon" style="background:rgba(71,200,255,0.12);">⏱</div>
+        Durée de séance
+      </div>
+    </div>
+    <div class="duration-field">
+      <input type="number" id="input-duration" min="0" max="300" value="90" />
+      <span class="duration-unit">minutes</span>
+    </div>
+  </div>
+
+  <!-- SECTION 3: PROJECTION -->
+  <div class="section-label">🎯 Projection</div>
+  <div class="metrics-grid" id="projection-metrics"></div>
+
+  <!-- SECTION 4: DOULEURS -->
+  <div class="section-label">🩺 Douleurs ressenties</div>
+  <div class="metric-card" style="margin-bottom:28px;">
+    <div class="pain-grid" id="pain-grid"></div>
+  </div>
+
+  <div class="submit-area">
+    <button class="btn btn-success" onclick="submitForm()">
+      ✓ &nbsp; Envoyer à mon coach
+    </button>
+  </div>
+</div>
+
+<!-- SUCCESS -->
+<div id="screen-success" class="screen">
+  <div class="success-icon">✓</div>
+  <div class="success-title">Envoyé !</div>
+  <div class="success-sub" id="success-msg">Tes données ont bien été transmises.<br>À demain ! 💪</div>
+  <div class="summary-pills" id="summary-pills"></div>
+  <button class="btn btn-ghost" onclick="goBack()">← Modifier</button>
+</div>
+
+<!-- COACH VIEW -->
+<div id="screen-coach" class="screen">
+  <div id="coach-locked">
+    <div class="coach-lock">
+      <h3>🔒 Accès Coach</h3>
+      <p>Entrez le code d'accès pour consulter les données de vos athlètes.</p>
+      <input type="password" id="coach-pin" placeholder="••••" maxlength="6" />
+      <button class="btn btn-primary" onclick="unlockCoach()">Accéder</button>
+      <div style="margin-top:12px;">
+        <button class="btn btn-ghost" onclick="showScreen('screen-onboard')" style="width:100%">Retour</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="coach-content" style="display:none">
+    <div class="coach-header">
+      <div class="coach-title">Dashboard Coach</div>
+      <button class="btn-sm" onclick="lockCoach()">🔒 Verrouiller</button>
+    </div>
+
+    <div class="filter-bar">
+      <select class="filter-select" id="filter-athlete" onchange="renderCoachTable()">
+        <option value="">Tous les athlètes</option>
+      </select>
+      <select class="filter-select" id="filter-days" onchange="renderCoachTable()">
+        <option value="7">7 derniers jours</option>
+        <option value="14">14 jours</option>
+        <option value="30">30 jours</option>
+        <option value="999">Tout</option>
+      </select>
+    </div>
+
+    <div class="export-bar">
+      <button class="btn-sm accent" onclick="exportCSV()">📊 Exporter CSV (Numbers)</button>
+      <button class="btn-sm" onclick="clearAllData()">🗑 Vider les données</button>
+    </div>
+
+    <div class="data-table-wrap">
+      <table id="coach-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Athlète</th>
+            <th>Sport</th>
+            <th>Sommeil</th>
+            <th>Confiance</th>
+            <th>Vivacité</th>
+            <th>Fatigue</th>
+            <th>CV</th>
+            <th>Muscu</th>
+            <th>Technique</th>
+            <th>Durée (min)</th>
+            <th>Perf.</th>
+            <th>Douleurs</th>
+          </tr>
+        </thead>
+        <tbody id="coach-tbody"></tbody>
+      </table>
+    </div>
+    <div id="coach-empty" class="empty-state" style="display:none">
+      Aucune donnée pour le moment. Les athlètes n'ont pas encore soumis de formulaire.
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav" id="bottom-nav">
+  <button class="nav-btn active" id="nav-track" onclick="switchNav('tracker')">📋 Suivi</button>
+  <button class="nav-btn" id="nav-history" onclick="switchNav('history')">📈 Historique</button>
+  <button class="nav-btn" id="nav-coach" onclick="showCoachLogin()">🏅 Coach</button>
+</nav>
+
+<script>
+// =================== DATA ===================
+const COACH_PIN = '1234'; // Change this
+const METRICS = {
+  recovery: [
+    { id: 'sleep',      label: 'Sommeil',          icon: '🌙', bg: 'rgba(100,80,200,0.12)', low: 'Mauvais', high: 'Excellent' },
+    { id: 'confidence', label: 'Niveau de confiance', icon: '💪', bg: 'rgba(232,255,71,0.1)',  low: 'Très bas', high: 'Maximal' },
+    { id: 'vivacity',   label: 'Vivacité',          icon: '⚡', bg: 'rgba(71,200,255,0.1)',  low: 'Amorphe', high: 'Au top' },
+    { id: 'fatigue',    label: 'Fatigue',            icon: '😴', bg: 'rgba(255,107,107,0.1)', low: 'Très fatigué', high: 'Frais' },
+  ],
+  session: [
+    { id: 'cardio',     label: 'Intensité cardio',  icon: '❤️', bg: 'rgba(255,107,107,0.1)', low: 'Légère', high: 'Max' },
+    { id: 'muscle',     label: 'Intensité musculaire', icon: '🏋️', bg: 'rgba(255,160,50,0.1)', low: 'Légère', high: 'Max' },
+    { id: 'technique',  label: 'Intensité technique', icon: '🎯', bg: 'rgba(71,200,255,0.1)', low: 'Basique', high: 'Max' },
+  ],
+  projection: [
+    { id: 'perf',       label: 'Performance à venir', icon: '🚀', bg: 'rgba(71,255,176,0.1)', low: 'Faible', high: 'Optimale' },
+  ]
+};
+
+const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbw5Eu11UkomRbSq80DMei1sCdADKQDS3zUCaWENw0rnXGufwBAWbrgqsSUhg0z2mFrkuA/exec';
+
+let athleteData = {};
+let allSubmissions = [];
+let currentValues = {};
+
+function loadData() {
+  try {
+    athleteData = JSON.parse(localStorage.getItem('athlete_profile') || '{}');
+    allSubmissions = JSON.parse(localStorage.getItem('at_submissions') || '[]');
+  } catch(e) { athleteData = {}; allSubmissions = []; }
+}
+
+function saveSubmissions() {
+  localStorage.setItem('at_submissions', JSON.stringify(allSubmissions));
+}
+
+function saveProfile() {
+  localStorage.setItem('athlete_profile', JSON.stringify(athleteData));
+}
+
+// =================== INIT ===================
+loadData();
+
+if (athleteData.name) {
+  initTracker();
+}
+
+function startTracker() {
+  const name = document.getElementById('input-name').value.trim();
+  const sport = document.getElementById('input-sport').value.trim();
+  if (!name) { document.getElementById('input-name').focus(); return; }
+  athleteData = { name, sport: sport || '—' };
+  saveProfile();
+  initTracker();
+}
+
+function initTracker() {
+  document.getElementById('display-name').textContent = athleteData.name;
+  const now = new Date();
+  document.getElementById('display-date').textContent = now.toLocaleDateString('fr-FR', { weekday:'short', day:'numeric', month:'short' });
+
+  buildMetrics('recovery-metrics', METRICS.recovery);
+  buildMetrics('session-metrics', METRICS.session);
+  buildMetrics('projection-metrics', METRICS.projection);
+  buildPainGrid();
+
+  // Init default values
+  [...METRICS.recovery, ...METRICS.session, ...METRICS.projection].forEach(m => {
+    currentValues[m.id] = 5;
+  });
+  currentValues.duration = 90;
+  currentValues.pain = [];
+
+  updateProgress();
+  showScreen('screen-tracker');
+  document.getElementById('bottom-nav').classList.add('visible');
+}
+
+// =================== SLIDERS ===================
+function buildMetrics(containerId, metrics) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = metrics.map(m => `
+    <div class="metric-card">
+      <div class="metric-top">
+        <div class="metric-name">
+          <div class="metric-icon" style="background:${m.bg}">${m.icon}</div>
+          ${m.label}
+        </div>
+        <div class="metric-value-display mid" id="val-${m.id}">5</div>
+      </div>
+      <div class="slider-wrap">
+        <input type="range" min="1" max="10" value="5" step="1"
+          id="slider-${m.id}"
+          oninput="updateSlider('${m.id}', this.value)"
+          style="background: linear-gradient(90deg, var(--accent2) 40%, var(--surface2) 40%)">
+        <div class="slider-labels">
+          <span>${m.low}</span>
+          <span>${m.high}</span>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function updateSlider(id, val) {
+  val = parseInt(val);
+  currentValues[id] = val;
+  const display = document.getElementById('val-' + id);
+  display.textContent = val;
+  display.className = 'metric-value-display ' + (val <= 3 ? 'low' : val <= 6 ? 'mid' : 'high');
+
+  // Update slider fill
+  const slider = document.getElementById('slider-' + id);
+  const pct = ((val - 1) / 9) * 100;
+  slider.style.background = `linear-gradient(90deg, var(--accent2) ${pct}%, var(--surface2) ${pct}%)`;
+
+  updateProgress();
+}
+
+function buildPainGrid() {
+  const zones = [
+    { id: 'head',    label: 'Tête',     icon: '🤕' },
+    { id: 'neck',    label: 'Nuque',    icon: '😬' },
+    { id: 'shoulder',label: 'Épaule',   icon: '💪' },
+    { id: 'back',    label: 'Dos',      icon: '🫀' },
+    { id: 'hip',     label: 'Hanche',   icon: '🦴' },
+    { id: 'knee',    label: 'Genou',    icon: '🦵' },
+    { id: 'ankle',   label: 'Cheville', icon: '🦶' },
+    { id: 'muscle',  label: 'Muscle',   icon: '💥' },
+    { id: 'other',   label: 'Autre',    icon: '❓' },
+  ];
+
+  const grid = document.getElementById('pain-grid');
+  grid.innerHTML = `
+    <button class="pain-btn-none selected" id="pain-none" onclick="togglePain('none')">
+      ✅ Aucune douleur
+    </button>
+    ${zones.map(z => `
+      <button class="pain-btn" id="pain-${z.id}" onclick="togglePain('${z.id}')">
+        <span>${z.icon}</span>
+        <span>${z.label}</span>
+      </button>
+    `).join('')}
+  `;
+  currentValues.pain = [];
+}
+
+function togglePain(zone) {
+  if (zone === 'none') {
+    currentValues.pain = [];
+    document.querySelectorAll('.pain-btn').forEach(b => b.classList.remove('selected'));
+    document.getElementById('pain-none').classList.add('selected');
+    return;
+  }
+  document.getElementById('pain-none').classList.remove('selected');
+  const btn = document.getElementById('pain-' + zone);
+  if (currentValues.pain.includes(zone)) {
+    currentValues.pain = currentValues.pain.filter(z => z !== zone);
+    btn.classList.remove('selected');
+  } else {
+    currentValues.pain.push(zone);
+    btn.classList.add('selected');
+  }
+  if (currentValues.pain.length === 0) {
+    document.getElementById('pain-none').classList.add('selected');
+  }
+}
+
+function updateProgress() {
+  const total = METRICS.recovery.length + METRICS.session.length + METRICS.projection.length;
+  const filled = Object.keys(currentValues).filter(k => k !== 'pain' && k !== 'duration').length;
+  document.getElementById('progress-fill').style.width = '100%';
+}
+
+// =================== SUBMIT ===================
+async function submitForm() {
+  currentValues.duration = parseInt(document.getElementById('input-duration').value) || 0;
+
+  const entry = {
+    ts: new Date().toISOString(),
+    date: new Date().toLocaleDateString('fr-FR'),
+    athlete: athleteData.name,
+    sport: athleteData.sport,
+    ...currentValues,
+    pain: currentValues.pain.length === 0 ? 'Aucune' : currentValues.pain.join(', ')
+  };
+
+  // Save locally
+  allSubmissions.push(entry);
+  saveSubmissions();
+
+  // Show success immediately, send to Google Sheets in background
+  const pillData = [
+    { label: 'Sommeil', val: entry.sleep },
+    { label: 'Confiance', val: entry.confidence },
+    { label: 'Vivacité', val: entry.vivacity },
+    { label: 'Fatigue', val: entry.fatigue },
+    { label: 'Cardio', val: entry.cardio },
+    { label: 'Muscu', val: entry.muscle },
+    { label: 'Technique', val: entry.technique },
+    { label: 'Perf.', val: entry.perf },
+    { label: 'Durée', val: entry.duration + 'min', raw: true },
+    { label: 'Douleurs', val: entry.pain, raw: true },
+  ];
+
+  document.getElementById('summary-pills').innerHTML = pillData.map(p => `
+    <div class="pill">${p.label}: <strong>${p.val}${p.raw ? '' : '/10'}</strong></div>
+  `).join('');
+
+  document.getElementById('success-msg').innerHTML = `
+    Données envoyées à ton coach, <strong>${athleteData.name}</strong> !<br>
+    <span style="font-size:13px;color:var(--muted)" id="sheet-status">📡 Synchronisation Google Sheet...</span>
+  `;
+
+  showScreen('screen-success');
+
+  // Send to Google Sheets
+  try {
+    await fetch(GOOGLE_SHEET_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(entry)
+    });
+    const status = document.getElementById('sheet-status');
+    if (status) status.innerHTML = '✅ Synchronisé dans Google Sheet';
+  } catch(err) {
+    const status = document.getElementById('sheet-status');
+    if (status) status.innerHTML = '⚠️ Sauvegardé en local (vérifier la connexion)';
+  }
+}
+
+function goBack() {
+  showScreen('screen-tracker');
+}
+
+// =================== COACH ===================
+let coachUnlocked = false;
+
+function showCoachLogin() {
+  if (coachUnlocked) {
+    showScreen('screen-coach');
+    renderCoachTable();
+    return;
+  }
+  showScreen('screen-coach');
+}
+
+function unlockCoach() {
+  const pin = document.getElementById('coach-pin').value;
+  if (pin === COACH_PIN) {
+    coachUnlocked = true;
+    document.getElementById('coach-locked').style.display = 'none';
+    document.getElementById('coach-content').style.display = 'block';
+    renderCoachTable();
+  } else {
+    document.getElementById('coach-pin').style.borderColor = 'var(--danger)';
+    setTimeout(() => document.getElementById('coach-pin').style.borderColor = '', 1200);
+  }
+}
+
+function lockCoach() {
+  coachUnlocked = false;
+  document.getElementById('coach-locked').style.display = 'block';
+  document.getElementById('coach-content').style.display = 'none';
+  document.getElementById('coach-pin').value = '';
+}
+
+function renderCoachTable() {
+  loadData();
+  const filterAthlete = document.getElementById('filter-athlete').value;
+  const filterDays = parseInt(document.getElementById('filter-days').value);
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - filterDays);
+
+  // Populate athlete filter
+  const athletes = [...new Set(allSubmissions.map(s => s.athlete))];
+  const sel = document.getElementById('filter-athlete');
+  const current = sel.value;
+  sel.innerHTML = '<option value="">Tous les athlètes</option>' + athletes.map(a => `<option value="${a}" ${a===current?'selected':''}>${a}</option>`).join('');
+
+  let data = allSubmissions.filter(s => {
+    const d = new Date(s.ts);
+    if (d < cutoff) return false;
+    if (filterAthlete && s.athlete !== filterAthlete) return false;
+    return true;
+  }).reverse();
+
+  const tbody = document.getElementById('coach-tbody');
+  const empty = document.getElementById('coach-empty');
+
+  if (data.length === 0) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  function colorClass(v) {
+    if (typeof v !== 'number') return '';
+    return v >= 8 ? 'val-high' : v <= 3 ? 'val-low' : 'val-mid';
+  }
+  function fmt(v) {
+    return `<span class="${colorClass(v)}">${v}</span>`;
+  }
+
+  tbody.innerHTML = data.map(s => `
+    <tr>
+      <td>${s.date}</td>
+      <td><strong>${s.athlete}</strong></td>
+      <td>${s.sport || '—'}</td>
+      <td>${fmt(s.sleep)}</td>
+      <td>${fmt(s.confidence)}</td>
+      <td>${fmt(s.vivacity)}</td>
+      <td>${fmt(s.fatigue)}</td>
+      <td>${fmt(s.cardio)}</td>
+      <td>${fmt(s.muscle)}</td>
+      <td>${fmt(s.technique)}</td>
+      <td>${s.duration}</td>
+      <td>${fmt(s.perf)}</td>
+      <td style="font-size:12px; color:var(--muted)">${s.pain || '—'}</td>
+    </tr>
+  `).join('');
+}
+
+// =================== EXPORT CSV ===================
+function exportCSV() {
+  loadData();
+  const headers = ['Date','Athlète','Sport','Sommeil','Confiance','Vivacité','Fatigue','Cardio','Musculaire','Technique','Durée (min)','Performance','Douleurs'];
+  const rows = allSubmissions.map(s => [
+    s.date, s.athlete, s.sport,
+    s.sleep, s.confidence, s.vivacity, s.fatigue,
+    s.cardio, s.muscle, s.technique,
+    s.duration, s.perf, s.pain
+  ]);
+
+  const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `athletetrack_${new Date().toLocaleDateString('fr-FR').replace(/\//g,'-')}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function clearAllData() {
+  if (confirm('Supprimer toutes les données ? Cette action est irréversible.')) {
+    allSubmissions = [];
+    saveSubmissions();
+    renderCoachTable();
+  }
+}
+
+// =================== NAV ===================
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function switchNav(view) {
+  if (view === 'tracker') {
+    if (!athleteData.name) { showScreen('screen-onboard'); return; }
+    showScreen('screen-tracker');
+    setNavActive('nav-track');
+  } else if (view === 'history') {
+    showHistoryView();
+    setNavActive('nav-history');
+  }
+}
+
+function setNavActive(id) {
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id)?.classList.add('active');
+}
+
+function showHistoryView() {
+  // Reuse success screen as simple history (simplified)
+  loadData();
+  const myData = allSubmissions.filter(s => s.athlete === athleteData.name).slice(-7).reverse();
+  const pillsHtml = myData.length === 0
+    ? '<p style="color:var(--muted);font-size:14px">Aucune donnée pour le moment.</p>'
+    : myData.map(s => `
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 18px;width:100%;text-align:left;font-size:13px;">
+          <div style="color:var(--muted);margin-bottom:8px;font-size:11px;letter-spacing:1px;text-transform:uppercase;">${s.date}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;">
+            ${['Sommeil:'+s.sleep,'Confiance:'+s.confidence,'Vivacité:'+s.vivacity,'Fatigue:'+s.fatigue,'Perf:'+s.perf].map(v=>`<span style="background:var(--surface2);border-radius:6px;padding:3px 8px;">${v}/10</span>`).join('')}
+          </div>
+        </div>
+      `).join('');
+
+  document.getElementById('success-icon') && (document.querySelector('.success-icon').textContent = '📈');
+  document.querySelector('.success-title').textContent = 'Historique';
+  document.querySelector('.success-sub').innerHTML = `Tes 7 dernières entrées, <strong>${athleteData.name}</strong>`;
+  document.getElementById('summary-pills').innerHTML = pillsHtml;
+  showScreen('screen-success');
+}
+
+// Intercept success "retour" from history
+const origGoBack = goBack;
+</script>
+</body>
+</html>
